@@ -1543,54 +1543,73 @@ class ConstraintPanel(QGroupBox):
         
         lay.addWidget(preset_frame)
 
-        def card_widget():
-            """Create a card frame with inner layout - each call creates a new instance"""
-            f = QFrame()
-            f.setStyleSheet(f"""
-                QFrame {{
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                                    stop:0 {C['bg3']}, stop:1 {C['bg2']});
-                    border: 1px solid {C['brd']};
-                    border-radius: 10px;
-                    padding: 2px;
-                }}
-            """)
-            inner = QWidget()
-            inner.setStyleSheet("background: transparent;")
-            inner_lay = QVBoxLayout(inner)
-            inner_lay.setContentsMargins(14, 12, 14, 12)
-            inner_lay.setSpacing(8)
-            
-            outer_lay = QVBoxLayout(f)
-            outer_lay.setContentsMargins(2, 2, 2, 2)
-            outer_lay.addWidget(inner)
-            
-            return inner_lay
-
-        # ── Toplam Rasyon ──
-        l1 = card_widget()
+        # ── Toplam Rasyon Card ──
+        f1 = QFrame()
+        f1.setStyleSheet(f"""
+            QFrame {{
+                background: {C['bg3']};
+                border: 1px solid {C['brd']};
+                border-radius: 10px;
+            }}
+        """)
+        l1 = QVBoxLayout(f1)
+        l1.setContentsMargins(14, 12, 14, 12)
+        l1.setSpacing(8)
         l1.addWidget(self._section("Toplam Rasyon", "⚖️"))
         self.sp_total = self._spin(0.1, 9999, 20.0, 1, " kg/gün")
         l1.addLayout(self._row("Günlük Rasyon Miktarı:", self.sp_total))
+        lay.addWidget(f1)
 
-        # ── Protein ──
-        l2 = card_widget()
+        # ── Protein Card ──
+        f2 = QFrame()
+        f2.setStyleSheet(f"""
+            QFrame {{
+                background: {C['bg3']};
+                border: 1px solid {C['brd']};
+                border-radius: 10px;
+            }}
+        """)
+        l2 = QVBoxLayout(f2)
+        l2.setContentsMargins(14, 12, 14, 12)
+        l2.setSpacing(8)
         l2.addWidget(self._section("Ham Protein Kısıtları", "🧬"))
         self.sp_pmin = self._spin(0, 100, 14.0, 2, " %")
         self.sp_pmax = self._spin(0, 100, 18.0, 2, " %")
         l2.addLayout(self._row("Minimum Protein:", self.sp_pmin))
         l2.addLayout(self._row("Maksimum Protein:", self.sp_pmax))
+        lay.addWidget(f2)
 
-        # ── Enerji ──
-        l3 = card_widget()
+        # ── Enerji Card ──
+        f3 = QFrame()
+        f3.setStyleSheet(f"""
+            QFrame {{
+                background: {C['bg3']};
+                border: 1px solid {C['brd']};
+                border-radius: 10px;
+            }}
+        """)
+        l3 = QVBoxLayout(f3)
+        l3.setContentsMargins(14, 12, 14, 12)
+        l3.setSpacing(8)
         l3.addWidget(self._section("Metabolik Enerji Kısıtları", "⚡"))
         self.sp_emin = self._spin(0, 30, 10.0, 3, " MJ/kg")
         self.sp_emax = self._spin(0, 30, 13.0, 3, " MJ/kg")
         l3.addLayout(self._row("Minimum ME:", self.sp_emin))
         l3.addLayout(self._row("Maksimum ME:", self.sp_emax))
+        lay.addWidget(f3)
 
-        # ── Kaba Yem ──
-        l4 = card_widget()
+        # ── Kaba Yem Card ──
+        f4 = QFrame()
+        f4.setStyleSheet(f"""
+            QFrame {{
+                background: {C['bg3']};
+                border: 1px solid {C['brd']};
+                border-radius: 10px;
+            }}
+        """)
+        l4 = QVBoxLayout(f4)
+        l4.setContentsMargins(14, 12, 14, 12)
+        l4.setSpacing(8)
         l4.addWidget(self._section("Kaba Yem Oranı (Ruminant)", "🌿"))
         self.sp_kmin = self._spin(0, 100, 40.0, 1, " %")
         self.sp_kmax = self._spin(0, 100, 70.0, 1, " %")
@@ -1599,6 +1618,7 @@ class ConstraintPanel(QGroupBox):
         note_k = QLabel("💡 Kaba yem yoksa bu kısıt uygulanmaz.")
         note_k.setStyleSheet(f"color:{C['t3']}; font-size:{F_TINY}px;")
         l4.addWidget(note_k)
+        lay.addWidget(f4)
 
         # ── Üre uyarı kutusu ──
         ure = QLabel("🔒  Üre Güvenlik Kısıtı Aktif\n"
