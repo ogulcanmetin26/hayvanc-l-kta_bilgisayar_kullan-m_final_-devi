@@ -1191,26 +1191,47 @@ class FeedTablePanel(QGroupBox):
         top = QHBoxLayout()
         top.setSpacing(8)
 
-        self.btn_import = QPushButton("📂  XLSX Yükle")
+        self.btn_import = QPushButton("XLSX Yukle")
         self.btn_import.setObjectName("btnImport")
         self.btn_import.setFixedHeight(36)
         self.btn_import.clicked.connect(self._import)
 
-        self.btn_sel   = QPushButton("✓  Tümünü Seç")
+        # Arama cubugu
+        self.search_box = QLineEdit()
+        self.search_box.setPlaceholderText("Yem ara...")
+        self.search_box.setFixedHeight(36)
+        self.search_box.setStyleSheet(f"""
+            QLineEdit {{
+                background: {C['bg3']};
+                border: 1px solid {C['brd']};
+                border-radius: 8px;
+                padding: 6px 12px;
+                color: {C['t1']};
+                font-size: {F_BASE}px;
+            }}
+            QLineEdit:focus {{
+                border: 1px solid {C['blue']};
+            }}
+        """)
+        self.search_box.textChanged.connect(self._filter_table)
+        
+        self.btn_sel   = QPushButton("Tumunu Sec")
         self.btn_sel.setObjectName("btnSelAll")
+        self.btn_sel.setFixedHeight(36)
         self.btn_sel.clicked.connect(self._sel_all)
 
-        self.btn_desel = QPushButton("✗  Seçimi Kaldır")
+        self.btn_desel = QPushButton("Secimi Kaldir")
         self.btn_desel.setObjectName("btnDesel")
+        self.btn_desel.setFixedHeight(36)
         self.btn_desel.clicked.connect(self._desel_all)
 
-        self.lbl_stat = QLabel("Henüz veri yüklenmedi")
+        self.lbl_stat = QLabel("Henuz veri yuklenmedi")
         self.lbl_stat.setStyleSheet(f"color:{C['t2']}; font-size:{F_SMALL}px;")
 
         top.addWidget(self.btn_import)
+        top.addWidget(self.search_box, stretch=1)
         top.addWidget(self.btn_sel)
         top.addWidget(self.btn_desel)
-        top.addStretch()
         top.addWidget(self.lbl_stat)
         lay.addLayout(top)
 
@@ -1239,12 +1260,21 @@ class FeedTablePanel(QGroupBox):
 
         # Alt not
         note = QLabel(
-            "💡  Fiyat hücrelerine çift tıklayarak düzenleyebilirsiniz. "
-            "Kaba yem tespiti yem adından otomatik yapılır."
+            "Fiyat hücrelerine cift tiklayarak duzenleyebilirsiniz. "
+            "Kaba yem tespiti yem adindan otomatik yapilir."
         )
         note.setStyleSheet(f"color:{C['t3']}; font-size:{F_TINY}px;")
         note.setWordWrap(True)
         lay.addWidget(note)
+
+    def _filter_table(self, text):
+        """Tablodaki satirlari filtrele"""
+        for row in range(self.table.rowCount()):
+            name_item = self.table.item(row, 1)
+            if name_item:
+                name = name_item.text().lower()
+                should_show = text.lower() in name if text else True
+                self.table.setRowHidden(row, not should_show)
 
     # ── Sütun tespiti ──
     def _detect(self, df, candidates):
@@ -1356,7 +1386,7 @@ class FeedTablePanel(QGroupBox):
 
             # Tür badge metni
             is_k = RasyonOptimizer.is_kaba(name)
-            ki = QTableWidgetItem("🌿 Kaba" if is_k else "🌾 Kesif")
+            ki = QTableWidgetItem("Kaba" if is_k else "Kesif")
             ki.setTextAlignment(Qt.AlignCenter)
             ki.setFont(QFont("Segoe UI", F_SMALL, QFont.Bold))
             ki.setFlags(ki.flags() & ~Qt.ItemIsEditable)
@@ -1823,8 +1853,8 @@ class ResultPanel(QGroupBox):
         card_row = QHBoxLayout()
         card_row.setSpacing(10)
         self.c_cost   = MetricCard("💰", "Toplam Maliyet",    "—",         C["green"])
-        self.c_prot   = MetricCard("🧬", "Gerçekleşen Protein","—",        C["purple"])
-        self.c_energy = MetricCard("⚡", "Gerçekleşen ME",    "—",         C["cyan"])
+        self.c_prot   = MetricCard("🧬", "Ham Protein",      "—",        C["purple"])
+        self.c_energy = MetricCard("⚡", "Metabolik Enerji",  "—",         C["cyan"])
         self.c_status = MetricCard("📊", "Durum",             "Bekliyor",  C["t2"])
         for c in [self.c_cost, self.c_prot, self.c_energy, self.c_status]:
             card_row.addWidget(c)
@@ -1852,8 +1882,11 @@ class ResultPanel(QGroupBox):
         self.table.setSortingEnabled(True)
         self.table.verticalHeader().setDefaultSectionSize(40)
 
-        hdrs = ["Yem Adı", "Miktar\n(kg)", "Rasyon\nPayı (%)",
-                "Protein\n(%)", "ME\n(MJ/kg)", "Maliyet\n(₺)", "Tür"]
+        # Tablo başlıkları güncellendi - kütle bilgileri eklendi
+        hdrs = ["Yem Adi", "Miktar\n(kg)", "Pay\n(%)",
+                "Protein\n(%)", "Prot(kg)",  # Protein % ve kg
+                "ME\n(MJ/kg)", "Enerji(MJ)",  # ME ve toplam MJ
+                "Maliyet\n(₺)", "Tur"]  # Maliyet ve tür
         self.table.setColumnCount(len(hdrs))
         self.table.setHorizontalHeaderLabels(hdrs)
         h = self.table.horizontalHeader()
@@ -1956,20 +1989,20 @@ class ResultPanel(QGroupBox):
 
         # Kartlar
         self.c_cost.set_value(
-            f"₺ {result['total_cost']:,.3f}",
+            f"TL {result['total_cost']:,.3f}",
             "Toplam rasyon maliyeti",
         )
         self.c_prot.set_value(
-            f"% {result['achieved_protein']:.2f}",
-            "Ham protein oranı (KM)",
-            absolute=f"= {result['total_protein_kg']:.3f} kg/gün",
+            f"%{result['achieved_protein']:.2f}",
+            "Ham protein (KM)",
+            absolute=f"{result['total_protein_kg']:.3f} kg",
         )
         self.c_energy.set_value(
-            f"{result['achieved_energy']:.3f}",
+            f"{result['achieved_energy']:.2f}",
             "MJ/kg metabolik enerji",
-            absolute=f"= {result['total_energy_mj']:.2f} MJ/gün",
+            absolute=f"{result['total_energy_mj']:.1f} MJ",
         )
-        self.c_status.set_value("✔ Optimal", f"{len(self._last)} yem kullanıldı")
+        self.c_status.set_value("Optimal", f"{len(self._last)} yem")
         self.c_status.set_accent(C["green"])
 
         # Besin özeti progress bar
@@ -1991,20 +2024,26 @@ class ResultPanel(QGroupBox):
                     i.setForeground(QColor(color))
                 return i
 
+            # Protein ve enerji kütle hesaplamalari
+            prot_kg = item['kg'] * item['protein'] / 100
+            enerji_mj = item['kg'] * item['energy']
+
             self.table.setItem(r, 0, itm(item["name"],
                                           Qt.AlignLeft | Qt.AlignVCenter,
                                           bold=True))
             self.table.setItem(r, 1, itm(f"{item['kg']:.3f}",   color=C["t1"]))
             self.table.setItem(r, 2, itm(f"{item['pct']:.2f}",  color=C["blue"], bold=True))
             self.table.setItem(r, 3, itm(f"{item['protein']:.2f}", color=C["purple"]))
-            self.table.setItem(r, 4, itm(f"{item['energy']:.3f}",  color=C["cyan"]))
-            self.table.setItem(r, 5, itm(f"{item['cost']:.3f}",    color=C["green"], bold=True))
+            self.table.setItem(r, 4, itm(f"{prot_kg:.3f}",      color=C["purple"], bold=True))
+            self.table.setItem(r, 5, itm(f"{item['energy']:.3f}",  color=C["cyan"]))
+            self.table.setItem(r, 6, itm(f"{enerji_mj:.3f}",    color=C["cyan"], bold=True))
+            self.table.setItem(r, 7, itm(f"{item['cost']:.3f}",    color=C["green"], bold=True))
 
-            kind = "🌿 Kaba" if item["is_kaba"] else "🌾 Kesif"
+            kind = "Kaba" if item["is_kaba"] else "Kesif"
             ki = itm(kind, color=C["green"] if item["is_kaba"] else C["t2"])
             if item["is_kaba"]:
                 ki.setBackground(QColor(21, 128, 61, 35))
-            self.table.setItem(r, 6, ki)
+            self.table.setItem(r, 8, ki)
 
         self.table.setSortingEnabled(True)
 
@@ -2026,37 +2065,48 @@ class ResultPanel(QGroupBox):
         if not self._last:
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, "Sonuçları Kaydet", "rasyon_sonucu.xlsx",
-            "Excel Dosyaları (*.xlsx)"
+            self, "Sonuclarini Kaydet", "rasyon_sonucu.xlsx",
+            "Excel Dosyalari (*.xlsx)"
         )
         if not path:
             return
         try:
-            df = pd.DataFrame(self._last)
-            df.rename(columns={
-                "name": "Yem Adı", "kg": "Miktar (kg)", "pct": "Rasyon Payı (%)",
-                "protein": "Protein (%)", "energy": "ME (MJ/kg)",
-                "cost": "Maliyet (₺)", "is_kaba": "Kaba Yem?",
-            }, inplace=True)
+            # Excel icin yeni veri yapisi - ASCII karakterler
+            export_data = []
+            for item in self._last:
+                prot_kg = item['kg'] * item['protein'] / 100
+                enerji_mj = item['kg'] * item['energy']
+                export_data.append({
+                    "Yem Adi": item['name'],
+                    "Miktar_kg": round(item['kg'], 3),
+                    "Pay_yuzde": round(item['pct'], 2),
+                    "Protein_yuzde": round(item['protein'], 2),
+                    "Protein_kg": round(prot_kg, 3),
+                    "ME_MJ_kg": round(item['energy'], 3),
+                    "Enerji_MJ": round(enerji_mj, 3),
+                    "Maliyet_tl": round(item['cost'], 3),
+                    "Tur": "Kaba" if item["is_kaba"] else "Kesif"
+                })
+            df = pd.DataFrame(export_data)
             df.to_excel(path, index=False)
-            QMessageBox.information(self, "Dışa Aktarma Başarılı",
+            QMessageBox.information(self, "Disa Aktarma Basarili",
                                     f"Dosya kaydedildi:\n{path}")
         except Exception as e:
-            QMessageBox.critical(self, "Dışa Aktarma Hatası", str(e))
+            QMessageBox.critical(self, "Disa Aktarma Hatasi", str(e))
 
     def _export_pdf(self):
-        """PDF formatında rapor oluştur"""
+        """PDF formatinda rapor olustur"""
         if not self._last:
             return
         if not HAS_REPORTLAB:
-            QMessageBox.warning(self, "Eksik Modül",
-                              "PDF raporu için 'reportlab' paketi kurulu değil.\n"
+            QMessageBox.warning(self, "Eksik Modul",
+                              "PDF raporu icin 'reportlab' paketi kurulu degil.\n"
                               "pip install reportlab")
             return
         
         path, _ = QFileDialog.getSaveFileName(
             self, "PDF Raporu Kaydet", "rasyon_raporu.pdf",
-            "PDF Dosyaları (*.pdf)"
+            "PDF Dosyalari (*.pdf)"
         )
         if not path:
             return
@@ -2101,23 +2151,27 @@ class ResultPanel(QGroupBox):
             
             elements = []
             
-            # Başlık
-            elements.append(Paragraph("🥬 Rasyon Optimizasyon Raporu", title_style))
-            elements.append(Paragraph(f"Oluşturulma: {datetime.now().strftime('%d.%m.%Y %H:%M')}", subtitle_style))
+            # Baslik
+            elements.append(Paragraph("Rasyon Optimizasyon Raporu", title_style))
+            elements.append(Paragraph(f"Olusturulma: {datetime.now().strftime('%d.%m.%Y %H:%M')}", subtitle_style))
             elements.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#3B82F6')))
             elements.append(Spacer(1, 15))
             
-            # Özet bilgiler
+            # Ozet bilgiler
             if self._last:
-                r = self._last[0]
-                elements.append(Paragraph("Özet Bilgiler", heading_style))
+                elements.append(Paragraph("Ozet Bilgiler", heading_style))
+                
+                total_prot_kg = sum(x['kg'] * x['protein'] / 100 for x in self._last)
+                total_en_mj = sum(x['kg'] * x['energy'] for x in self._last)
                 
                 summary_data = [
-                    ["Toplam Maliyet", f"₺ {sum(x['cost'] for x in self._last):.3f}"],
-                    ["Toplam Ağırlık", f"{sum(x['kg'] for x in self._last):.3f} kg"],
-                    ["Kullanılan Yem Sayısı", str(len(self._last))],
-                    ["Kaba Yem Sayısı", str(sum(1 for x in self._last if x['is_kaba']))],
-                    ["Kesif Yem Sayısı", str(sum(1 for x in self._last if not x['is_kaba']))],
+                    ["Toplam Maliyet", f"TL {sum(x['cost'] for x in self._last):.3f}"],
+                    ["Toplam Agirlik", f"{sum(x['kg'] for x in self._last):.3f} kg"],
+                    ["Toplam Protein", f"{total_prot_kg:.3f} kg"],
+                    ["Toplam Enerji", f"{total_en_mj:.3f} MJ"],
+                    ["Kullanilan Yem Sayisi", str(len(self._last))],
+                    ["Kaba Yem Sayisi", str(sum(1 for x in self._last if x['is_kaba']))],
+                    ["Kesif Yem Sayisi", str(sum(1 for x in self._last if not x['is_kaba']))],
                 ]
                 summary_table = Table(summary_data, colWidths=[150, 150])
                 summary_table.setStyle(TableStyle([
@@ -2136,28 +2190,32 @@ class ResultPanel(QGroupBox):
                 elements.append(summary_table)
                 elements.append(Spacer(1, 20))
                 
-                # Detay tablo
-                elements.append(Paragraph("Detaylı Rasyon Bileşimi", heading_style))
+                # Detay tablo - yeni sutunlar eklendi
+                elements.append(Paragraph("Detayli Rasyon Bilesimi", heading_style))
                 
-                table_data = [["Yem Adı", "Miktar (kg)", "Pay (%)", "Protein (%)", "ME (MJ/kg)", "Maliyet (₺)", "Tür"]]
+                table_data = [["Yem Adi", "Miktar(kg)", "Pay(%)", "Prot(%)", "Prot(kg)", "ME(MJ/kg)", "Enerji(MJ)", "Maliyet(TL)", "Tur"]]
                 for item in self._last:
+                    prot_kg = item['kg'] * item['protein'] / 100
+                    enerji_mj = item['kg'] * item['energy']
                     table_data.append([
-                        item['name'][:35] + ('...' if len(item['name']) > 35 else ''),
+                        item['name'][:25] + ('...' if len(item['name']) > 25 else ''),
                         f"{item['kg']:.3f}",
                         f"{item['pct']:.2f}",
                         f"{item['protein']:.2f}",
+                        f"{prot_kg:.3f}",
                         f"{item['energy']:.3f}",
+                        f"{enerji_mj:.3f}",
                         f"{item['cost']:.3f}",
                         "Kaba" if item['is_kaba'] else "Kesif"
                     ])
                 
-                col_widths = [80, 50, 40, 45, 45, 45, 35]
+                col_widths = [55, 42, 35, 38, 38, 42, 42, 42, 28]
                 detail_table = Table(table_data, colWidths=col_widths)
                 detail_table.setStyle(TableStyle([
                     ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3B82F6')),
                     ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                     ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                    ('FONTSIZE', (0, 0), (-1, -1), 8),
+                    ('FONTSIZE', (0, 0), (-1, -1), 7),
                     ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                     ('ALIGN', (0, 1), (0, -1), 'LEFT'),
                     ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
@@ -2179,10 +2237,10 @@ class ResultPanel(QGroupBox):
             elements.append(footer_text)
             
             doc.build(elements)
-            QMessageBox.information(self, "PDF Başarılı",
-                                    f"PDF raporu oluşturuldu:\n{path}")
+            QMessageBox.information(self, "PDF Basarili",
+                                    f"PDF raporu olusturuldu:\n{path}")
         except Exception as e:
-            QMessageBox.critical(self, "PDF Hatası", str(e))
+            QMessageBox.critical(self, "PDF Hatasi", str(e))
 
 
 # ══════════════════════════════════════════════════════════════════════
