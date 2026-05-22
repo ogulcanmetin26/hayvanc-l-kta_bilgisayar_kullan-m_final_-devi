@@ -1543,7 +1543,8 @@ class ConstraintPanel(QGroupBox):
         
         lay.addWidget(preset_frame)
 
-        def card():
+        def card_widget():
+            """Create a card frame with inner layout - each call creates a new instance"""
             f = QFrame()
             f.setStyleSheet(f"""
                 QFrame {{
@@ -1553,47 +1554,43 @@ class ConstraintPanel(QGroupBox):
                     border-radius: 10px;
                     padding: 2px;
                 }}
-                QFrame:hover {{
-                    border: 1px solid {C['blue']}60;
-                }}
             """)
-            inner = QFrame()
-            inner.setStyleSheet(f"background: transparent; border-radius: 8px;")
+            inner = QWidget()
+            inner.setStyleSheet("background: transparent;")
             inner_lay = QVBoxLayout(inner)
             inner_lay.setContentsMargins(14, 12, 14, 12)
             inner_lay.setSpacing(8)
-            f_lay = QVBoxLayout(f)
-            f_lay.setContentsMargins(2, 2, 2, 2)
-            f_lay.addWidget(inner)
-            return inner, inner_lay
+            
+            outer_lay = QVBoxLayout(f)
+            outer_lay.setContentsMargins(2, 2, 2, 2)
+            outer_lay.addWidget(inner)
+            
+            return inner_lay
 
         # ── Toplam Rasyon ──
-        _, l1 = card()
+        l1 = card_widget()
         l1.addWidget(self._section("Toplam Rasyon", "⚖️"))
         self.sp_total = self._spin(0.1, 9999, 20.0, 1, " kg/gün")
         l1.addLayout(self._row("Günlük Rasyon Miktarı:", self.sp_total))
-        lay.addWidget(f)
 
         # ── Protein ──
-        _, l2 = card()
+        l2 = card_widget()
         l2.addWidget(self._section("Ham Protein Kısıtları", "🧬"))
         self.sp_pmin = self._spin(0, 100, 14.0, 2, " %")
         self.sp_pmax = self._spin(0, 100, 18.0, 2, " %")
         l2.addLayout(self._row("Minimum Protein:", self.sp_pmin))
         l2.addLayout(self._row("Maksimum Protein:", self.sp_pmax))
-        lay.addWidget(f)
 
         # ── Enerji ──
-        _, l3 = card()
+        l3 = card_widget()
         l3.addWidget(self._section("Metabolik Enerji Kısıtları", "⚡"))
         self.sp_emin = self._spin(0, 30, 10.0, 3, " MJ/kg")
         self.sp_emax = self._spin(0, 30, 13.0, 3, " MJ/kg")
         l3.addLayout(self._row("Minimum ME:", self.sp_emin))
         l3.addLayout(self._row("Maksimum ME:", self.sp_emax))
-        lay.addWidget(f)
 
         # ── Kaba Yem ──
-        _, l4 = card()
+        l4 = card_widget()
         l4.addWidget(self._section("Kaba Yem Oranı (Ruminant)", "🌿"))
         self.sp_kmin = self._spin(0, 100, 40.0, 1, " %")
         self.sp_kmax = self._spin(0, 100, 70.0, 1, " %")
@@ -1602,7 +1599,6 @@ class ConstraintPanel(QGroupBox):
         note_k = QLabel("💡 Kaba yem yoksa bu kısıt uygulanmaz.")
         note_k.setStyleSheet(f"color:{C['t3']}; font-size:{F_TINY}px;")
         l4.addWidget(note_k)
-        lay.addWidget(f)
 
         # ── Üre uyarı kutusu ──
         ure = QLabel("🔒  Üre Güvenlik Kısıtı Aktif\n"
@@ -2483,10 +2479,12 @@ class MainWindow(QMainWindow):
 #  GİRİŞ NOKTASI
 # ══════════════════════════════════════════════════════════════════════
 def main():
+    # High DPI ayarları QApplication'dan ÖNCE olmalı!
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
     app = QApplication(sys.argv)
     app.setApplicationName("Rasyon Optimizasyon Sistemi")
-    app.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-    app.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
     app.setStyleSheet(STYLE)
 
     pal = QPalette()
